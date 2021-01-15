@@ -43,8 +43,18 @@ def singledl(url, dldir=path):
     id = urllib.parse.urlparse(url).query.split("=")[1]
     txt = session.get(url).text
     title = txt[txt.find('<title>') + 7: txt.find('</title>')]
-    delivery_info = json.loads(session.get(url_base + "/Panopto/Pages/Viewer/DeliveryInfo.aspx",
-                                           **{"data": {"deliveryId": id, "responseType": "json"}}).text)
+    
+    getdeliv = session.get(url_base + "/Panopto/Pages/Viewer/DeliveryInfo.aspx",
+                                           **{"data": {"deliveryId": id, "responseType": "json"}})
+    
+    if not getdeliv:
+        print('Your cookie file is likely outdated or invalid')
+        print(getdeliv)
+        exit()
+    
+    delivery_info = json.loads(getdeliv.text)
+    #print(delivery_info)
+    
     creator = delivery_info["Delivery"]["OwnerDisplayName"]
     write_title = "{}".format(title)
     stream = delivery_info["Delivery"]["Streams"]
