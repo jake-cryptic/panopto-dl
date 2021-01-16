@@ -92,7 +92,7 @@ def folderdl(folder,path=path,parent=""):
     params = {"queryParameters": {"folderID": folder["Id"]}}
     sessions = jsonadapter("/Panopto/Services/Data.svc/GetSessions", url_base,params, True, "json")["d"]["Results"]
     for session in sessions:
-        folder_name=str(session["FolderName"]).replace("/","-")
+        folder_name=str(session["FolderName"]).replace("/","-").replace(":", " ")
         name=session["SessionName"].replace("/","-")
         dl=session["IosVideoUrl"]
         dldir=r"{}/{}".format(path, "/".join([parent.replace("/","-"),folder_name]))
