@@ -8,6 +8,7 @@ import os
 import argparse
 import sys
 
+
 parser = argparse.ArgumentParser(description='downloads videos from panopto')
 
 parser.add_argument('--cookies', metavar='cookies', type=str, help='path to a netscape cookie file')
@@ -79,11 +80,22 @@ def jsonadapter(endpoint, base, params=None, post=False, paramtype="params"):
 
 
 def interop(url):
+    print('Querying your panopto folders... One moment please.\n')
     folders = jsonadapter("/Panopto/Api/Folders", url_base, {"parentId": "null", "folderSet": 1})
-    id = urllib.parse.urlparse(url).fragment.split("=")[1]
+    id = str(urllib.parse.urlparse(url).fragment.split("=")[1]).replace('"', '')
+
+    print('Folders found:')
     for folder in folders:
+        print(f'Found [{folder["Id"]}] -> {folder["Name"]}')
         if folder["Id"] == id:
             return folder
+    
+    print('Error! I could not find that FolderID, check it is in the list above!')
+    exit(1)
+
+
+def make_file_name_safe(name):
+    return str(name).replace("/", "-").replace(":", " ").replace('?', '')
 
 
 def folderdl(folder, path=path, parent=""):
@@ -91,22 +103,23 @@ def folderdl(folder, path=path, parent=""):
 
     params = {"queryParameters": {"folderID": folder["Id"]}}
     sessions = jsonadapter("/Panopto/Services/Data.svc/GetSessions", url_base, params, True, "json")["d"]["Results"]
-    print("Found videos:")
+    
+    print("Found videos in folder:")
     for session in sessions:
-        print("\t -", session["SessionName"])
+        print("\t -", parent, session["SessionName"])
 
     print("Starting folder download...")
 
     for session in sessions:
-        folder_name = str(session["FolderName"]).replace("/", "-").replace(":", " ")
-        name = session["SessionName"].replace("/", "-")
+        folder_name = make_file_name_safe(session["FolderName"])
+        name = make_file_name_safe(session["SessionName"])
         dl = session["IosVideoUrl"]
-        dldir = r"{}/{}".format(path, "/".join([parent.replace("/", "-"), folder_name]))
+        dldir = r"{}/{}".format(path, "/".join([make_file_name_safe(parent), folder_name]))
         os.makedirs(dldir, exist_ok=True)
         if params != "":
-            print("\nDownloading: {}/{}\n".format(parent, name))
+            print("\nDownloading: {}/{}".format(parent, name))
         else:
-            print("\nDownloading: {}\n".format(name))
+            print("\nDownloading: {}".format(name))
         ydl_opts["outtmpl"] = "{}/{}.%(ext)s".format(dldir, name)
 
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -119,6 +132,7 @@ def folderdl(folder, path=path, parent=""):
 
 
 if "folder" in url:
+    print('Found folder in URL!')
     folderdl(interop(url), path)
 elif "Viewer.aspx" in url:
     singledl(url, path)
